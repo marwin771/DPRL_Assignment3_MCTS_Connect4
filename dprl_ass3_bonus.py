@@ -23,7 +23,6 @@ class ConnectFour:
         return self.check_winner() is not None or all(self.board[0][col] != 0 for col in range(self.cols))
 
     def check_winner(self):
-        # Check horizontal, vertical, and diagonal lines for a winner
         for row in range(self.rows):
             for col in range(self.cols - 3):
                 if self.board[row][col] != 0 and all(self.board[row][col + i] == self.board[row][col] for i in range(4)):
@@ -65,13 +64,14 @@ class ConnectFour:
         print()
 
 class Node:
-    def __init__(self, game, parent=None, player=None):
+    def __init__(self, game, parent=None, player=None, action=None):
         self.game = game
         self.parent = parent
         self.children = []
         self.visits = 0
         self.value = 0
         self.player = player
+        self.action = action
 
     def is_fully_expanded(self):
         return len(self.children) == len(self.game.get_legal_actions())
@@ -80,13 +80,19 @@ class Node:
         return max(self.children, key=lambda child: child.value / (child.visits + 1e-6) + exploration_weight * math.sqrt(math.log(self.visits + 1) / (child.visits + 1e-6)))
 
     def expand(self):
-        untried_actions = [action for action in self.game.get_legal_actions() if action not in [child.game for child in self.children]]
+        untried_actions = [action for action in self.game.get_legal_actions() if action not in [child.action for child in self.children]]
         action = random.choice(untried_actions)
         new_game = self.game.copy()
         new_game.play_action(action)
-        child_node = Node(game=new_game, parent=self, player=new_game.current_player)
+        child_node = Node(game=new_game, parent=self, player=new_game.current_player, action=action)
         self.children.append(child_node)
         return child_node
+
+    def action_probabilities(self):
+        probabilities = {}
+        for child in self.children:
+            probabilities[child.action] = child.visits / max(1, self.visits)
+        return probabilities
 
 class MCTS:
     def __init__(self):
@@ -98,6 +104,13 @@ class MCTS:
             node = self._select(root)
             reward = self.simulate(node)
             self.backpropagate(node, reward)
+
+        # Display action probabilities
+        action_probs = root.action_probabilities()
+        print("Winning probabilities for actions:")
+        for action, prob in sorted(action_probs.items()):
+            print(f"Column {action+1}: {prob:.2f}")
+
         return root.best_child(exploration_weight=0).game
 
     def _select(self, node):

@@ -118,7 +118,7 @@ class MCTS:
         action_probs = root.action_probabilities()
         print("Winning probabilities for actions:")
         for action, prob in sorted(action_probs.items()):
-            print(f"Column {action}: {prob:.2f}")
+            print(f"Column {action+1}: {prob:.2f}")
 
         return root.best_child(exploration_weight=0).game
 
